@@ -2,7 +2,7 @@
 """
 
 # This file is part of cli-mit-fixins.
-# Copyright 2019 Dave Rogers <thedude@yukondude.com>.
+# Copyright Dave Rogers 2019 <thedude@yukondude.com>.
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
@@ -18,5 +18,5 @@ def version_message():
     pyproject.read(os.path.join(os.path.splitext(__name__)[0], "..", "pyproject.toml"))
     command_name = pyproject["tool.poetry"]["name"].strip('"')
     version = pyproject["tool.poetry"]["version"].strip('"')
-    copyright_msg = "Copyright {{cookiecutter.copyright_year}} {{cookiecutter.author_name}}. Licensed under the GPLv3. See LICENSE."
+    copyright_msg = "TODO: WHAT IS IT?"
     return f"{command_name} version {version}\n{copyright_msg}\n"

@@ -2,7 +2,7 @@
 """
 
 # This file is part of cli-mit-fixins.
-# Copyright 2019 Dave Rogers <thedude@yukondude.com>.
+# Copyright Dave Rogers 2019 <thedude@yukondude.com>.
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
