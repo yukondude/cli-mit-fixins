@@ -10,69 +10,15 @@ from click.core import Option
 from click.testing import CliRunner
 import pytest
 
-from mitfixins.cli_helper import (
-    CliException,
-    COMMAND_NAME,
-    DEFAULT_CONFIG_FILE_PATH,
-    echo_wrapper,
+from mitfixins.config import (
     get_short_switches,
     is_option_switch_in_arguments,
     load_toml_config,
     print_config,
     render_toml_config,
-    show_version,
 )
-
-
-@pytest.mark.parametrize("arguments,expected", [
-    # verbosity, threshold, severity, message:   stdout,  stderr
-    ((-1,        1,         1,        "info"),  ("",      "")),
-    ((0,         1,         0,        "info"),  ("",      "")),
-    ((0,         1,         1,        "info"),  ("",      "")),
-    ((1,         1,         1,        "info"),  ("info",  "")),
-    ((2,         1,         1,        "info"),  ("info",  "")),
-    ((3,         1,         1,        "info"),  ("info",  "")),
-    ((4,         1,         1,        "info"),  ("info",  "")),
-    ((0,         1,         2,        "warn"),  ("",      "")),
-    ((1,         1,         2,        "warn"),  ("",      "WARNING warn")),
-    ((2,         1,         2,        "warn"),  ("",      "WARNING warn")),
-    ((3,         1,         2,        "warn"),  ("",      "WARNING warn")),
-    ((0,         1,         3,        "error"), ("",      "ERROR error")),
-    ((1,         1,         3,        "error"), ("",      "ERROR error")),
-    ((2,         1,         3,        "error"), ("",      "ERROR error")),
-    ((3,         1,         3,        "error"), ("",      "ERROR error")),
-    ((3,         1,         4,        "error"), ("",      "ERROR error")),
-    ((0,         0,         1,        "info"),  ("",      "")),
-    ((0,         1,         1,        "info"),  ("",      "")),
-    ((0,         2,         1,        "more"),  ("",      "")),
-    ((0,         3,         1,        "debug"), ("",      "")),
-    ((0,         4,         1,        "debug"), ("",      "")),
-    ((1,         0,         1,        "info"),  ("info",  "")),
-    ((1,         1,         1,        "info"),  ("info",  "")),
-    ((1,         2,         1,        "more"),  ("",      "")),
-    ((1,         3,         1,        "debug"), ("",      "")),
-    ((1,         4,         1,        "debug"), ("",      "")),
-    ((2,         0,         1,        "info"),  ("info",  "")),
-    ((2,         1,         1,        "info"),  ("info",  "")),
-    ((2,         2,         1,        "more"),  ("more",  "")),
-    ((2,         3,         1,        "debug"), ("",      "")),
-    ((2,         4,         1,        "debug"), ("",      "")),
-    ((3,         0,         1,        "info"),  ("info",  "")),
-    ((3,         1,         1,        "info"),  ("info",  "")),
-    ((3,         2,         1,        "more"),  ("more",  "")),
-    ((3,         3,         1,        "debug"), ("debug", "")),
-    ((3,         4,         1,        "debug"), ("debug", "")),
-])
-def test_echo_wrapper(capsys, arguments, expected):
-    verbosity, threshold, severity, message = arguments
-    expected_out, expected_err = expected
-
-    echo = echo_wrapper(verbosity)
-    echo(message, threshold, severity)
-
-    captured_out, captured_err = capsys.readouterr()
-    assert captured_out.strip() == expected_out
-    assert captured_err.strip() == expected_err
+from mitfixins.constants import COMMAND_NAME, DEFAULT_CONFIG_FILE_PATH
+from mitfixins.exceptions import CliException
 
 
 @pytest.mark.parametrize("options,expected", [
@@ -172,23 +118,3 @@ a = 33"""
 ])
 def test_render_toml_config(settings, arguments, expected):
     assert render_toml_config(settings, arguments) == expected
-
-
-def test_show_version_fail(capsys):
-    show_version(None, None, None)
-    captured_out, captured_err = capsys.readouterr()
-    assert captured_out == ""
-    assert captured_err == ""
-
-
-def test_show_version(capsys, version_message):
-    class MockContext:
-        resilient_parsing = False
-
-        def exit(self):
-            pass
-
-    show_version(MockContext(), None, True)
-    captured_out, captured_err = capsys.readouterr()
-    assert captured_out == version_message
-    assert captured_err == ""
