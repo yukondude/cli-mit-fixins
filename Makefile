@@ -23,7 +23,7 @@ fulltest:
 	-coverage report --fail-under 80 --show-missing --omit='*site-packages*,*__init__.py'
 	echo
 	echo "Radon Cyclomatic Complexity (CC)"
-	radon cc --average cli-mit-fixins
+	radon cc --average mitfixins
 	echo
 	echo "Radon Maintainability Index (MI)"
-	radon mi --show --sort cli-mit-fixins
+	radon mi --show --sort mitfixins
