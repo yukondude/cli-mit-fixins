@@ -38,7 +38,9 @@ repos:
     - --disable=bad-continuation  # When pylint and black squabble.
     - --disable=fixme  # Allow TODO comments.
     - --disable=import-error  # pylint plugin has trouble with virtualenv imports.
+    - --disable=redefined-builtin
     - --disable=too-few-public-methods  # Sheesh, pylint, give it a rest.
+    - --disable=too-many-arguments
 - repo: https://github.com/Lucas-C/pre-commit-hooks
   rev: v1.1.7
   hooks:

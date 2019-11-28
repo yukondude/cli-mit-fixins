@@ -12,63 +12,129 @@ import sys
 import click
 import toml
 
-
 from .constants import (
     COMMAND_NAME,
     DEFAULT_CONFIG_FILE_PATH,
-    DEFAULT_CONFIG_FILE_OPTION,
-    DEFAULT_PRINT_CONFIG_OPTION,
+    DEFAULT_CONFIG_FILE_OPTION_NAME,
+    DEFAULT_PRINT_CONFIG_OPTION_NAME,
 )
 from .exceptions import CliException
 from .utility import echo_wrapper
 
 
-def config_command_class(config_file_option=DEFAULT_CONFIG_FILE_OPTION):
+def config_command_class(
+    config_file_option_name=DEFAULT_CONFIG_FILE_OPTION_NAME,
+    print_config_option_name=DEFAULT_PRINT_CONFIG_OPTION_NAME,
+    excluded_options=None,
+):
     """ Return a custom Command class that loads any configuration file before
         arguments passed on the command line.
         Based on https://stackoverflow.com/a/46391887/726
     """
+    excluded_options = excluded_options if excluded_options is not None else []
+    excluded_options.extend([config_file_option_name, print_config_option_name])
+
+    def print_config_wrapper(ctx, param, value):
+        """ Print the sample configuration file, delegating the real work to
+            print_config().
+        """
+        _ = param
+
+        if not value or ctx.resilient_parsing:
+            return
+
+        echo_wrapper(3)(
+            print_config(
+                ctx.command.params, excluded_options, ctx.params, render_toml_config
+            )
+        )
+        ctx.exit()
 
     class ConfigCommand(click.Command):
         """ Click Command subclass that loads settings from a configuration file.
         """
 
+        # noinspection PyShadowingBuiltins
+        def __init__(
+            self,
+            name,
+            context_settings=None,
+            callback=None,
+            params=None,
+            help=None,
+            epilog=None,
+            short_help=None,
+            options_metavar="[OPTIONS]",
+            add_help_option=True,
+            hidden=False,
+            deprecated=False,
+        ):
+
+            print_config_option = click.Option(
+                ["--print-config"],
+                is_flag=True,
+                callback=print_config_wrapper,
+                expose_value=False,
+                help="Print a sample configuration file that corresponds to the "
+                "command line options and exit. Ignores the settings from a "
+                "configuration file. This must be the final option switch for the "
+                "command.",
+            )
+
+            params = params or []
+            params.append(print_config_option)
+
+            super().__init__(
+                name,
+                context_settings,
+                callback,
+                params,
+                help,
+                epilog,
+                short_help,
+                options_metavar,
+                add_help_option,
+                hidden,
+                deprecated,
+            )
+
         def invoke(self, ctx):
             """ Load the configuration settings into the context.
             """
-            config_path = ctx.params[config_file_option]
+            if config_file_option_name in ctx.params:
+                config_path = ctx.params[config_file_option_name]
 
-            if not config_path:
-                config_path = DEFAULT_CONFIG_FILE_PATH
+                if not config_path:
+                    config_path = DEFAULT_CONFIG_FILE_PATH
 
-            if pathlib.Path(config_path).exists():
-                settings = load_toml_config(config_path)
-                short_switches = get_short_switches(ctx.command.params)
+                if pathlib.Path(config_path).exists():
+                    settings = load_toml_config(config_path)
+                    short_switches = get_short_switches(ctx.command.params)
 
-                for option in ctx.command.params:
-                    if option.name not in ctx.params or not isinstance(
-                        option, click.core.Option
-                    ):
-                        continue
+                    for option in ctx.command.params:
+                        if option.name not in ctx.params or not isinstance(
+                            option, click.core.Option
+                        ):
+                            continue
 
-                    # Third preferential choice for option value is the declared
-                    # default. Second choice is the configuration file setting.
-                    value = settings.get(option.name, option.default)
+                        # Third preferential choice for option value is the declared
+                        # default. Second choice is the configuration file setting.
+                        value = settings.get(option.name, option.default)
 
-                    # ...and first choice is the value passed on the command line.
-                    # Have to check this manually because the context already
-                    # includes the default if the option wasn't specified. Click
-                    # doesn't seem to report if a value arrived via the default or
-                    # explicitly on the command line and I haven't figured a way to
-                    # intercept the normal parsing to implement this myself.
-                    if is_option_switch_in_arguments(
-                        option.opts + option.secondary_opts,
-                        short_switches,
-                        sys.argv[1:],
-                    ):
-                        value = ctx.params[option.name]
+                        # ...and first choice is the value passed on the command line.
+                        # Have to check this manually because the context already
+                        # includes the default if the option wasn't specified. Click
+                        # doesn't seem to report if a value arrived via the default or
+                        # explicitly on the command line and I haven't figured a way to
+                        # intercept the normal parsing to implement this myself.
+                        if is_option_switch_in_arguments(
+                            option.opts + option.secondary_opts,
+                            short_switches,
+                            sys.argv[1:],
+                        ):
+                            value = ctx.params[option.name]
 
-                    ctx.params[option.name] = value
+                        ctx.params[option.name] = value
 
             return super().invoke(ctx)
 
@@ -87,32 +153,6 @@ def get_short_switches(options):
                     short_switch_list.append(switch[1])
 
     return "".join(short_switch_list)
-
-
-def handle_print_config_option(
-    print_option=DEFAULT_PRINT_CONFIG_OPTION,
-    config_file_option=DEFAULT_CONFIG_FILE_OPTION,
-    excluded_options=None,
-):
-    """ Print a sample configuration file that corresponds to the current options and
-        exit.
-    """
-    ctx = click.get_current_context()
-
-    if not ctx.params[print_option]:
-        return
-
-    excluded_options = excluded_options if excluded_options is not None else []
-    excluded_options.extend((print_option, config_file_option))
-
-    config = print_config(
-        options=ctx.command.params,
-        excluded_options=excluded_options,
-        arguments=ctx.params,
-        render_func=render_toml_config,
-    )
-    echo_wrapper(3)(config)
-    ctx.exit()
 
 
 def is_option_switch_in_arguments(switches, short_switches, arguments):
@@ -187,10 +227,12 @@ def render_toml_config(settings, arguments):
 
     for setting_name in sorted(settings):
         setting = settings[setting_name]
-        argument = arguments[setting_name]
+        argument = arguments.get(setting_name)
 
         if argument is not None and argument != ():
-            lines.append(f"# {setting.help}")
+            if setting.help:
+                lines.append(f"# {setting.help}")
+
             prefix = "# " if argument == setting.default else ""
             toml_setting = toml.dumps({setting_name: argument})
             lines.append(f"{prefix}{toml_setting}")
