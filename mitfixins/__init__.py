@@ -22,4 +22,4 @@ from .decorators import (
     cli_version_option,
 )
 from .exceptions import CliException
-from .utility import echo_wrapper
+from .utility import echo_wrapper, Severity, Verbosity

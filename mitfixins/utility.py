@@ -6,6 +6,7 @@
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
+import enum
 import sys
 
 import click
@@ -15,40 +16,61 @@ from click._compat import get_text_stderr as click_compat_get_text_stderr
 from click.utils import echo as click_utils_echo
 
 
+class Severity(enum.IntEnum):
+    """ Possible message severities.
+    """
+
+    NORMAL = 1
+    WARNING = 2
+    ERROR = 3
+
+
+class Verbosity(enum.IntEnum):
+    """ Possible message levels of verbosity.
+    """
+
+    NONE = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
+
 def echo_wrapper(verbosity):
     """ Return an echo function that displays or doesn't based on the verbosity count.
     """
     severity_ranks = {
-        1: {"prefix": "", "style": {"fg": "green", "bold": False}},
-        2: {"prefix": "WARNING ", "style": {"fg": "yellow", "bold": True}},
-        3: {"prefix": "ERROR ", "style": {"fg": "red", "bold": True}},
+        Severity.NORMAL: {"prefix": "", "style": {"fg": "green", "bold": False}},
+        Severity.WARNING: {
+            "prefix": f"{Severity.WARNING.name} ",
+            "style": {"fg": "yellow", "bold": True},
+        },
+        Severity.ERROR: {
+            "prefix": f"{Severity.ERROR.name} ",
+            "style": {"fg": "red", "bold": True},
+        },
     }
 
-    # Clamp the verbosity between 0 and 3.
-    verbosity = min(max(verbosity, 0), 3)
-
-    def echo_func(message, threshold=1, severity=1):
+    def echo_func(message, verbosity_threshold=Verbosity.LOW, severity=Severity.NORMAL):
         """ Display the message if the given threshold is no greater than the current
             verbosity count. Errors are always displayed. Warnings are displayed if the
             verbosity count is at least 1. Errors and warnings are sent to STDERR.
         """
-        # Clamp the threshold and severity between 1 and 3.
-        threshold = min(max(threshold, 1), 3)
-        severity = min(max(severity, 1), 3)
+        # Limit the threshold to at least low verbosity.
+        verbosity_threshold = max(verbosity_threshold, Verbosity.LOW)
 
-        if severity == 2:
+        if severity == Severity.WARNING:
             # Display warnings if verbosity is turned on at all.
-            threshold = 1
-        elif severity >= 3:
+            verbosity_threshold = Verbosity.LOW
+        elif severity == Severity.ERROR:
             # Always display errors.
-            threshold = 0
+            verbosity_threshold = Verbosity.NONE
 
-        if threshold <= verbosity:
-            severity_rank = severity_ranks.get(severity, severity_ranks[3])
+        if verbosity_threshold <= verbosity:
+            severity_rank = severity_ranks.get(severity, severity_ranks[Severity.ERROR])
             prefix = severity_rank["prefix"]
             style = severity_rank["style"]
 
-            is_err = severity > 1
+            is_err = severity != Severity.NORMAL
             click.secho(f"{prefix}{message}", err=is_err, **style)
 
     return echo_func
