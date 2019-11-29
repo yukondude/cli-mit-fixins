@@ -42,6 +42,7 @@ class AutoConfigCommand(click.Command):
     print_config_option_switches = None
     print_config_option_help = None
     print_config_callback = None
+    sort_help_options = False
 
     # noinspection PyShadowingBuiltins
     def __init__(
@@ -83,6 +84,32 @@ class AutoConfigCommand(click.Command):
             hidden,
             deprecated,
         )
+
+    def format_options(self, ctx, formatter):
+        """ Override Click's default listing of options, sorting them if necessary.
+        """
+
+        def switch_sort_key(element):
+            """ Extract the names of the option switches without leading hyphens.
+            """
+            switches = element[0].lower()
+            switch_list = [s.strip().strip("-") for s in switches.split(",")]
+            return "|".join(switch_list)
+
+        opts = []
+
+        for param in self.get_params(ctx):
+            switch_help = param.get_help_record(ctx)
+
+            if switch_help is not None:
+                opts.append(switch_help)
+
+        if opts:
+            if self.sort_help_options:
+                opts.sort(key=switch_sort_key)
+
+            with formatter.section("Options"):
+                formatter.write_dl(opts)
 
     @staticmethod
     def get_short_switches(options):
@@ -230,6 +257,7 @@ def make_auto_config_command(
     print_config_option_name=DEFAULT_PRINT_CONFIG_OPTION_NAME,
     print_config_option_switches=DEFAULT_PRINT_CONFIG_OPTION_SWITCHES,
     print_config_option_help=DEFAULT_PRINT_CONFIG_OPTION_HELP,
+    sort_help_options=True,
     excluded_options=None,
 ):
     """ Return a custom Command class that loads any configuration file before
@@ -263,4 +291,5 @@ def make_auto_config_command(
     command_class.print_config_option_switches = print_config_option_switches
     command_class.print_config_option_help = print_config_option_help
     command_class.print_config_callback = print_config_callback
+    command_class.sort_help_options = sort_help_options
     return command_class
