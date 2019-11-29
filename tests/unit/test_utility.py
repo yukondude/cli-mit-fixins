@@ -8,7 +8,7 @@
 
 import pytest
 
-from mitfixins.utility import echo_wrapper, Verbosity, Severity
+from mitfixins.utility import make_echo, Verbosity, Severity
 
 
 @pytest.mark.parametrize("arguments,expected", [
@@ -46,7 +46,7 @@ def test_echo_wrapper(capsys, arguments, expected):
     verbosity, threshold, severity, message = arguments
     expected_out, expected_err = expected
 
-    echo = echo_wrapper(Verbosity(verbosity))
+    echo = make_echo(Verbosity(verbosity))
     echo(message, Verbosity(threshold), Severity(severity))
 
     captured_out, captured_err = capsys.readouterr()

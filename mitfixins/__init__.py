@@ -7,13 +7,15 @@
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
-from .config import config_command_class
+from .config import make_auto_config_command
+
 from .constants import (
     COMMAND_NAME,
     DEFAULT_CONFIG_FILE_PATH,
     DEFAULT_PRINT_CONFIG_OPTION_NAME,
     DEFAULT_CONFIG_FILE_OPTION_NAME,
 )
+
 from .decorators import (
     cli_config_file_option,
     cli_dry_run_option,
@@ -21,5 +23,7 @@ from .decorators import (
     cli_verbose_option,
     cli_version_option,
 )
+
 from .exceptions import CliException
-from .utility import echo_wrapper, Severity, Verbosity
+
+from .utility import make_echo, Severity, Verbosity

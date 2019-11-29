@@ -8,7 +8,7 @@
 
 import click
 
-from .utility import echo_wrapper
+from .utility import make_echo
 
 
 class CliException(click.ClickException):
@@ -19,4 +19,4 @@ class CliException(click.ClickException):
         """ Display the error.
         """
         _ = file
-        echo_wrapper(0)(self.format_message(), severity=3)
+        make_echo(0)(self.format_message(), severity=3)

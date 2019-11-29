@@ -35,7 +35,7 @@ class Verbosity(enum.IntEnum):
     HIGH = 3
 
 
-def echo_wrapper(verbosity):
+def make_echo(verbosity: Verbosity):
     """ Return an echo function that displays or doesn't based on the verbosity count.
     """
     severity_ranks = {
@@ -87,7 +87,7 @@ def _show_usage(self, file=None):
         color = self.ctx.color
         click_utils_echo(self.ctx.get_usage() + "\n", file=file, color=color)
 
-    echo_wrapper(0)(self.format_message(), severity=3)
+    make_echo(Verbosity.NONE)(self.format_message(), severity=3)
     sys.exit(1)
 
 

@@ -19,10 +19,10 @@ from .constants import (
     DEFAULT_PRINT_CONFIG_OPTION_NAME,
 )
 from .exceptions import CliException
-from .utility import echo_wrapper
+from .utility import make_echo, Verbosity
 
 
-def config_command_class(
+def make_auto_config_command(
     config_file_option_name=DEFAULT_CONFIG_FILE_OPTION_NAME,
     print_config_option_name=DEFAULT_PRINT_CONFIG_OPTION_NAME,
     excluded_options=None,
@@ -43,14 +43,14 @@ def config_command_class(
         if not value or ctx.resilient_parsing:
             return
 
-        echo_wrapper(3)(
+        make_echo(Verbosity.HIGH)(
             print_config(
                 ctx.command.params, excluded_options, ctx.params, render_toml_config
             )
         )
         ctx.exit()
 
-    class ConfigCommand(click.Command):
+    class AutoConfigCommand(click.Command):
         """ Click Command subclass that loads settings from a configuration file.
         """
 
@@ -138,7 +138,7 @@ def config_command_class(
 
             return super().invoke(ctx)
 
-    return ConfigCommand
+    return AutoConfigCommand
 
 
 def get_short_switches(options):
