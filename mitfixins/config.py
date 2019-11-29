@@ -119,11 +119,10 @@ class AutoConfigCommand(click.Command):
 
     @staticmethod
     def get_switch_sort_key(element):
-        """ Extract the names of the option switches without leading hyphens.
+        """ Extract the concatenated names of the option switches without leading
+            hyphens.
         """
-        switches = element[0].lower()
-        switch_list = [s.strip().strip("-") for s in switches.split(",")]
-        return "|".join(switch_list)
+        return "|".join([s.strip().strip("-") for s in element[0].lower().split(",")])
 
     def invoke(self, ctx):
         """ Load the configuration settings into the context.
