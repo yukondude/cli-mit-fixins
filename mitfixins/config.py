@@ -88,14 +88,6 @@ class AutoConfigCommand(click.Command):
     def format_options(self, ctx, formatter):
         """ Override Click's default listing of options, sorting them if necessary.
         """
-
-        def switch_sort_key(element):
-            """ Extract the names of the option switches without leading hyphens.
-            """
-            switches = element[0].lower()
-            switch_list = [s.strip().strip("-") for s in switches.split(",")]
-            return "|".join(switch_list)
-
         opts = []
 
         for param in self.get_params(ctx):
@@ -106,7 +98,7 @@ class AutoConfigCommand(click.Command):
 
         if opts:
             if self.sort_help_options:
-                opts.sort(key=switch_sort_key)
+                opts.sort(key=self.get_switch_sort_key)
 
             with formatter.section("Options"):
                 formatter.write_dl(opts)
@@ -124,6 +116,14 @@ class AutoConfigCommand(click.Command):
                         short_switch_list.append(switch[1])
 
         return "".join(short_switch_list)
+
+    @staticmethod
+    def get_switch_sort_key(element):
+        """ Extract the names of the option switches without leading hyphens.
+        """
+        switches = element[0].lower()
+        switch_list = [s.strip().strip("-") for s in switches.split(",")]
+        return "|".join(switch_list)
 
     def invoke(self, ctx):
         """ Load the configuration settings into the context.
