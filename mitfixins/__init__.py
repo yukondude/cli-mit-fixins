@@ -9,12 +9,7 @@
 
 from .config import make_auto_config_command
 
-from .constants import (
-    COMMAND_NAME,
-    DEFAULT_CONFIG_FILE_PATH,
-    DEFAULT_PRINT_CONFIG_OPTION_NAME,
-    DEFAULT_CONFIG_FILE_OPTION_NAME,
-)
+from .constants import COMMAND_NAME
 
 from .decorators import (
     cli_config_file_option,

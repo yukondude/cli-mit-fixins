@@ -8,15 +8,5 @@
 
 import os
 
-import click
-
 
 COMMAND_NAME = os.path.splitext(__name__)[0]
-
-DEFAULT_CONFIG_FILE_PATH = os.path.join(
-    click.get_app_dir(app_name=COMMAND_NAME, force_posix=True), f"{COMMAND_NAME}.toml"
-)
-
-DEFAULT_CONFIG_FILE_OPTION_NAME = "config_file"
-
-DEFAULT_PRINT_CONFIG_OPTION_NAME = "print_config"

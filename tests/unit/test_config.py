@@ -10,14 +10,8 @@ from click.core import Option
 from click.testing import CliRunner
 import pytest
 
-from mitfixins.config import (
-    get_short_switches,
-    is_option_switch_in_arguments,
-    load_toml_config,
-    print_config,
-    render_toml_config,
-)
-from mitfixins.constants import COMMAND_NAME, DEFAULT_CONFIG_FILE_PATH
+from mitfixins.config import AutoConfigCommand, DEFAULT_CONFIG_FILE_PATH
+from mitfixins.constants import COMMAND_NAME
 from mitfixins.exceptions import CliException
 
 
@@ -28,7 +22,7 @@ from mitfixins.exceptions import CliException
     ((Option(["--apple", "-a"]), Option(["--banana", "-B"])), "aB"),
 ])
 def test_get_short_switches(options, expected):
-    assert get_short_switches(options) == expected
+    assert AutoConfigCommand.get_short_switches(options) == expected
 
 
 @pytest.mark.parametrize("switches,short_switches,arguments,expected", [
@@ -49,8 +43,11 @@ def test_get_short_switches(options, expected):
     (("-a", "--apple"), "aBcD",         ("-D", "--apple=food", "-a"), True),
 ])
 def test_is_option_switch_in_arguments(switches, short_switches, arguments, expected):
-    assert is_option_switch_in_arguments(switches, short_switches, arguments) == \
-           expected
+    assert AutoConfigCommand.is_option_switch_in_arguments(
+        switches,
+        short_switches,
+        arguments
+    ) == expected
 
 
 def test_load_toml_config_fail():
@@ -59,7 +56,7 @@ def test_load_toml_config_fail():
             toml_file.write("BAD MOJO")
 
         with pytest.raises(CliException):
-            assert load_toml_config("test.toml")
+            assert AutoConfigCommand.load_toml_config("test.toml")
 
 
 def test_load_toml_config_pass():
@@ -67,7 +64,7 @@ def test_load_toml_config_pass():
         with open('test.toml', 'w') as toml_file:
             toml_file.write(f"[{COMMAND_NAME}]\nvariable = 13")
 
-        assert {"variable": 13} == load_toml_config("test.toml")
+        assert {"variable": 13} == AutoConfigCommand.load_toml_config("test.toml")
 
 
 @pytest.mark.parametrize("options,excluded_options,arguments,expected", [
@@ -86,7 +83,12 @@ def test_print_config(options, excluded_options, arguments, expected):
         _ = arguments
         return ",".join([f"{s}:{arguments_[s]}" for s in sorted(settings)])
 
-    assert print_config(options, excluded_options, arguments, mock_render) == expected
+    assert AutoConfigCommand.print_config(
+        options,
+        excluded_options,
+        arguments,
+        mock_render
+    ) == expected
 
 
 EXPECTED_EMPTY_CONFIG = f"""# Sample {COMMAND_NAME} configuration file, by """ + \
@@ -117,4 +119,4 @@ a = 33"""
      EXPECTED_NONDEFAULT_CONFIG),
 ])
 def test_render_toml_config(settings, arguments, expected):
-    assert render_toml_config(settings, arguments) == expected
+    assert AutoConfigCommand.render_toml_config(settings, arguments) == expected
