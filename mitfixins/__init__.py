@@ -16,7 +16,6 @@ from .decorators import (
     cli_dry_run_option,
     cli_print_config_option,
     cli_verbose_option,
-    cli_version_option,
 )
 
 from .exceptions import CliException

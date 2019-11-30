@@ -6,11 +6,7 @@
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
-import pkg_resources
-
 import click
-
-from .constants import COMMAND_NAME
 
 
 def cli_config_file_option(func):
@@ -62,35 +58,3 @@ def cli_verbose_option(func):
         help="Increase the verbosity of status messages: use once for normal output, "
         "twice for additional output, and thrice for debug-level output.",
     )(func)
-
-
-def cli_version_option(func):
-    """ Decorator to enable the --version/-V option.
-    """
-    return click.option(
-        "--version",
-        "-V",
-        is_flag=True,
-        callback=show_version,
-        expose_value=False,
-        is_eager=True,
-        help="Show the version number and exit.",
-    )(func)
-
-
-def show_version(ctx, param, value):
-    """ Show the version number and exit.
-    """
-    _ = param
-
-    if not value or ctx.resilient_parsing:
-        return
-
-    try:
-        version = pkg_resources.get_distribution(COMMAND_NAME).version
-    except pkg_resources.DistributionNotFound:  # pragma: no cover
-        version = f"({COMMAND_NAME} is not registered)"
-
-    click.echo(f"{COMMAND_NAME} version {version}")
-    click.echo("VERSION STRING SOMEHOW GETS HERE")
-    ctx.exit()

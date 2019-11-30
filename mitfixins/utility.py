@@ -39,7 +39,7 @@ def make_echo(verbosity: Verbosity):
     """ Return an echo function that displays or doesn't based on the verbosity count.
     """
     severity_ranks = {
-        Severity.NORMAL: {"prefix": "", "style": {"fg": "green", "bold": False}},
+        Severity.NORMAL: {"prefix": "", "style": {"bold": False}},
         Severity.WARNING: {
             "prefix": f"{Severity.WARNING.name} ",
             "style": {"fg": "yellow", "bold": True},

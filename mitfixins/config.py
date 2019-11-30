@@ -10,6 +10,8 @@ import os
 import pathlib
 import sys
 
+import pkg_resources
+
 import click
 import toml
 
@@ -32,6 +34,9 @@ DEFAULT_PRINT_CONFIG_OPTION_HELP = (
     "option switch for the command."
 )
 
+DEFAULT_VERSION_OPTION_SWITCHES = ("-V", "--version")
+DEFAULT_VERSION_OPTION_HELP = "Show the version number and exit."
+
 
 class AutoConfigCommand(click.Command):
     """ Click Command subclass that loads settings from a configuration file and that
@@ -43,6 +48,9 @@ class AutoConfigCommand(click.Command):
     print_config_option_switches = None
     print_config_option_help = None
     print_config_callback = None
+    version_option_switches = None
+    version_option_help = None
+    version_option_callback = None
     sort_help_options = False
 
     # noinspection PyShadowingBuiltins
@@ -69,8 +77,17 @@ class AutoConfigCommand(click.Command):
             help=self.print_config_option_help,
         )
 
+        version_option = click.Option(
+            self.version_option_switches,
+            is_flag=True,
+            callback=self.__class__.version_option_callback,
+            expose_value=False,
+            is_eager=True,
+            help=self.version_option_help,
+        )
+
         params = params or []
-        params.append(print_config_option)
+        params.extend((print_config_option, version_option))
 
         super().__init__(
             name,
@@ -257,6 +274,9 @@ def make_auto_config_command(
     print_config_option_name=DEFAULT_PRINT_CONFIG_OPTION_NAME,
     print_config_option_switches=DEFAULT_PRINT_CONFIG_OPTION_SWITCHES,
     print_config_option_help=DEFAULT_PRINT_CONFIG_OPTION_HELP,
+    version_option_switches=DEFAULT_VERSION_OPTION_SWITCHES,
+    version_option_help=DEFAULT_VERSION_OPTION_HELP,
+    version_text="",
     sort_help_options=True,
     excluded_options=None,
 ):
@@ -267,28 +287,56 @@ def make_auto_config_command(
     excluded_options = excluded_options if excluded_options is not None else []
     excluded_options.extend([config_file_option_name, print_config_option_name])
 
-    def print_config_callback(ctx, param, value):
+    def print_config_callback(ctx, echo):
         """ Print the sample configuration file, delegating the real work to
             print_config().
         """
-        if not value or ctx.resilient_parsing:
-            return
-
         config = AutoConfigCommand.print_config(
             ctx.command.params,
             excluded_options,
             ctx.params,
             AutoConfigCommand.render_toml_config,
         )
-        make_echo(Verbosity.HIGH)(config)
-        ctx.exit()
-        _ = param
+        echo(config)
+
+    def version_option_callback(ctx, echo):
+        """ Show the version number and exit.
+        """
+        try:
+            version = pkg_resources.get_distribution(ctx.command_path).version
+            echo(f"{ctx.command_path} version {version}")
+        except pkg_resources.DistributionNotFound:  # pragma: no cover
+            echo(f"{ctx.command_path} (version not registered)")
+
+        if version_text:
+            echo(version_text)
 
     command_class = AutoConfigCommand
     command_class.config_file_option_name = config_file_option_name
     command_class.print_config_option_name = print_config_option_name
     command_class.print_config_option_switches = print_config_option_switches
     command_class.print_config_option_help = print_config_option_help
-    command_class.print_config_callback = print_config_callback
+    command_class.print_config_callback = make_eager_callback(print_config_callback)
+    command_class.version_option_switches = version_option_switches
+    command_class.version_option_help = version_option_help
+    command_class.version_option_callback = make_eager_callback(version_option_callback)
     command_class.sort_help_options = sort_help_options
     return command_class
+
+
+def make_eager_callback(wrapped_func):
+    """ Return an eager Click parameter callback function that delegates emitting output
+        to the given wrapped function.
+    """
+
+    def eager_callback(ctx, param, value):
+        """ Call the wrapped function and exit immediately.
+        """
+        if not value or ctx.resilient_parsing:
+            return
+
+        wrapped_func(ctx, echo=make_echo(Verbosity.HIGH))
+        ctx.exit()
+        _ = param
+
+    return eager_callback
