@@ -9,8 +9,6 @@
 
 from .config import make_auto_config_command
 
-from .constants import COMMAND_NAME
-
 from .decorators import (
     cli_config_file_option,
     cli_dry_run_option,

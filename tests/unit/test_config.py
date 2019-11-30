@@ -10,9 +10,12 @@ from click.core import Option
 from click.testing import CliRunner
 import pytest
 
-from mitfixins.config import AutoConfigCommand, DEFAULT_CONFIG_FILE_PATH
-from mitfixins.constants import COMMAND_NAME
+from mitfixins.config import AutoConfigCommand
 from mitfixins.exceptions import CliException
+
+
+COMMAND_NAME = "test_config"
+CONFIG_FILE_PATH = "test_config.toml"
 
 
 @pytest.mark.parametrize("options,expected", [
@@ -73,19 +76,22 @@ def test_get_switch_sort_key(element, expected):
 
 def test_load_toml_config_fail():
     with CliRunner().isolated_filesystem():
-        with open('test.toml', 'w') as toml_file:
+        with open(CONFIG_FILE_PATH, "w") as toml_file:
             toml_file.write("BAD MOJO")
 
         with pytest.raises(CliException):
-            assert AutoConfigCommand.load_toml_config("test.toml")
+            assert AutoConfigCommand.load_toml_config(COMMAND_NAME, CONFIG_FILE_PATH)
 
 
 def test_load_toml_config_pass():
     with CliRunner().isolated_filesystem():
-        with open('test.toml', 'w') as toml_file:
+        with open(CONFIG_FILE_PATH, "w") as toml_file:
             toml_file.write(f"[{COMMAND_NAME}]\nvariable = 13")
 
-        assert {"variable": 13} == AutoConfigCommand.load_toml_config("test.toml")
+        assert {"variable": 13} == AutoConfigCommand.load_toml_config(
+            COMMAND_NAME,
+            CONFIG_FILE_PATH,
+        )
 
 
 @pytest.mark.parametrize("options,excluded_options,arguments,expected", [
@@ -100,11 +106,15 @@ def test_load_toml_config_pass():
      {"banana": 13, "apple": 42}, "banana:13"),
 ])
 def test_print_config(options, excluded_options, arguments, expected):
-    def mock_render(settings, arguments_):
+    def mock_render(command_name, config_path, settings, arguments_):
         _ = arguments
+        _ = command_name
+        _ = config_path
         return ",".join([f"{s}:{arguments_[s]}" for s in sorted(settings)])
 
     assert AutoConfigCommand.print_config(
+        COMMAND_NAME,
+        CONFIG_FILE_PATH,
         options,
         excluded_options,
         arguments,
@@ -113,7 +123,7 @@ def test_print_config(options, excluded_options, arguments, expected):
 
 
 EXPECTED_EMPTY_CONFIG = f"""# Sample {COMMAND_NAME} configuration file, by """ + \
-    f"""default located at {DEFAULT_CONFIG_FILE_PATH}.
+    f"""default located at {CONFIG_FILE_PATH}.
 # Configuration options already set to the default value are commented-out.
 
 [{COMMAND_NAME}]"""
@@ -140,4 +150,9 @@ a = 33"""
      EXPECTED_NONDEFAULT_CONFIG),
 ])
 def test_render_toml_config(settings, arguments, expected):
-    assert AutoConfigCommand.render_toml_config(settings, arguments) == expected
+    assert AutoConfigCommand.render_toml_config(
+        COMMAND_NAME,
+        CONFIG_FILE_PATH,
+        settings,
+        arguments
+    ) == expected

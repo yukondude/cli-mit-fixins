@@ -15,14 +15,9 @@ import pkg_resources
 import click
 import toml
 
-from .constants import COMMAND_NAME
 from .exceptions import CliException
 from .utility import make_echo, Verbosity
 
-
-DEFAULT_CONFIG_FILE_PATH = os.path.join(
-    click.get_app_dir(app_name=COMMAND_NAME, force_posix=True), f"{COMMAND_NAME}.toml"
-)
 
 DEFAULT_CONFIG_FILE_OPTION_NAME = "config_file"
 
@@ -122,6 +117,21 @@ class AutoConfigCommand(click.Command):
                 formatter.write_dl(opts)
 
     @staticmethod
+    def get_config_path(command_name, config_file_option_value):
+        """ Return the configuration file path for the given command name and overriding
+            file path, if specified.
+        """
+        config_path = config_file_option_value
+
+        if not config_path:
+            config_path = os.path.join(
+                click.get_app_dir(app_name=command_name, force_posix=True),
+                f"{command_name}.toml",
+            )
+
+        return config_path
+
+    @staticmethod
     def get_short_switches(options):
         """ Return a string of gathered 'short' (1 character) option switches.
         """
@@ -146,13 +156,13 @@ class AutoConfigCommand(click.Command):
         """ Load the configuration settings into the context.
         """
         if self.config_file_option_name in ctx.params:
-            config_path = ctx.params[self.config_file_option_name]
-
-            if not config_path:
-                config_path = DEFAULT_CONFIG_FILE_PATH
+            command_name = ctx.command_path
+            config_path = self.get_config_path(
+                command_name, ctx.params[self.config_file_option_name]
+            )
 
             if pathlib.Path(config_path).exists():
-                settings = self.load_toml_config(config_path)
+                settings = self.load_toml_config(command_name, config_path)
                 short_switches = self.get_short_switches(ctx.command.params)
 
                 for option in ctx.command.params:
@@ -208,14 +218,18 @@ class AutoConfigCommand(click.Command):
         return False
 
     @staticmethod
-    def load_toml_config(config_path):
+    def load_toml_config(command_name, config_path):
         """ Load the settings from the given path to a TOML-format configuration file.
         """
         settings = {}
 
         with open(config_path, "r") as config_file:
             try:
-                settings = toml.load(config_file)[COMMAND_NAME]
+                settings = toml.load(config_file)[command_name]
+            except KeyError:
+                raise CliException(
+                    f"Unable to parse [{command_name}] section from '{config_path}'."
+                )
             except toml.TomlDecodeError as exc:
                 raise CliException(
                     f"Unable to parse configuration file '{config_path}': {exc}"
@@ -224,7 +238,9 @@ class AutoConfigCommand(click.Command):
         return settings
 
     @staticmethod
-    def print_config(options, excluded_options, arguments, render_func):
+    def print_config(
+        command_name, config_path, options, excluded_options, arguments, render_func
+    ):
         """ Return the sample configuration file for the defined options and command
             line arguments via the given render function as a string.
         """
@@ -238,19 +254,19 @@ class AutoConfigCommand(click.Command):
             ):
                 settings[option.name] = option
 
-        return render_func(settings, arguments)
+        return render_func(command_name, config_path, settings, arguments)
 
     @staticmethod
-    def render_toml_config(settings, arguments):
+    def render_toml_config(command_name, config_path, settings, arguments):
         """ Return the settings rendered into a TOML-format configuration file string.
         """
         lines = [
-            f"# Sample {COMMAND_NAME} configuration file, by default located at "
-            f"{DEFAULT_CONFIG_FILE_PATH}.",
+            f"# Sample {command_name} configuration file, by default located at "
+            f"{config_path}.",
             "# Configuration options already set to the default value are "
             "commented-out.",
             "",
-            f"[{COMMAND_NAME}]",
+            f"[{command_name}]",
             "",
         ]
 
@@ -292,6 +308,10 @@ def make_auto_config_command(
             print_config().
         """
         config = AutoConfigCommand.print_config(
+            ctx.command_path,
+            AutoConfigCommand.get_config_path(
+                ctx.command_path, ctx.params.get(config_file_option_name)
+            ),
             ctx.command.params,
             excluded_options,
             ctx.params,
