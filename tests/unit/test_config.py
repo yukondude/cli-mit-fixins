@@ -50,6 +50,27 @@ def test_is_option_switch_in_arguments(switches, short_switches, arguments, expe
     ) == expected
 
 
+@pytest.mark.parametrize("element,expected", [
+    # element,      #expected
+    ([""],                        ""),
+    (["-a"],                      "a"),
+    (["-A"],                      "a"),
+    (["--a"],                     "a"),
+    (["--A"],                     "a"),
+    (["-a, --banana"],            "abanana"),
+    (["--a, -b"],                 "ab"),
+    (["--a, --banana"],           "abanana"),
+    (["--apple , --banana"],      "applebanana"),
+    (["--apple,-b"],              "appleb"),
+    (["--a, "],                   "a"),
+    ([",-b"],                     "b"),
+    ([" , --banana"],             "banana"),
+    (["-a, --banana , --cherry"], "abananacherry"),
+])
+def test_get_switch_sort_key(element, expected):
+    assert AutoConfigCommand.get_switch_sort_key(element) == expected
+
+
 def test_load_toml_config_fail():
     with CliRunner().isolated_filesystem():
         with open('test.toml', 'w') as toml_file:

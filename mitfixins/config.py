@@ -34,7 +34,8 @@ DEFAULT_PRINT_CONFIG_OPTION_HELP = (
 
 
 class AutoConfigCommand(click.Command):
-    """ Click Command subclass that loads settings from a configuration file.
+    """ Click Command subclass that loads settings from a configuration file and that
+        can emit configuration file settings from the given command line arguments.
     """
 
     config_file_option_name = None
@@ -122,7 +123,7 @@ class AutoConfigCommand(click.Command):
         """ Extract the concatenated names of the option switches without leading
             hyphens.
         """
-        return "|".join([s.strip().strip("-") for s in element[0].lower().split(",")])
+        return "".join([s.strip().strip("-") for s in element[0].lower().split(",")])
 
     def invoke(self, ctx):
         """ Load the configuration settings into the context.
@@ -270,8 +271,6 @@ def make_auto_config_command(
         """ Print the sample configuration file, delegating the real work to
             print_config().
         """
-        _ = param
-
         if not value or ctx.resilient_parsing:
             return
 
@@ -283,6 +282,7 @@ def make_auto_config_command(
         )
         make_echo(Verbosity.HIGH)(config)
         ctx.exit()
+        _ = param
 
     command_class = AutoConfigCommand
     command_class.config_file_option_name = config_file_option_name
