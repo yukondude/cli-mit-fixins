@@ -7,7 +7,11 @@
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
-from .config import make_auto_config_command
+from .config import (
+    make_auto_config_command,
+    make_sorted_option_command,
+    make_versioned_command,
+)
 
 from .decorators import (
     cli_config_file_option,

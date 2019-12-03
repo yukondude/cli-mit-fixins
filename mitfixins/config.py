@@ -33,9 +33,94 @@ DEFAULT_VERSION_OPTION_SWITCHES = ("-V", "--version")
 DEFAULT_VERSION_OPTION_HELP = "Show the version number and exit."
 
 
-class AutoConfigCommand(click.Command):
+class SortedOptionCommand(click.Command):
+    """ Click Command subclass that can sort the options if desired.
+    """
+
+    sort_help_options = False
+
+    def format_options(self, ctx, formatter):
+        """ Override Click's default listing of options, sorting them if necessary.
+        """
+        opts = []
+
+        for param in self.get_params(ctx):
+            switch_help = param.get_help_record(ctx)
+
+            if any(switch_help):
+                opts.append(switch_help)
+
+        if opts:
+            if self.sort_help_options:
+                opts.sort(key=self.get_switch_sort_key)
+
+            with formatter.section("Options"):
+                formatter.write_dl(opts)
+
+    @staticmethod
+    def get_switch_sort_key(element):
+        """ Extract the concatenated names of the option switches without leading
+            hyphens.
+        """
+        return "".join([s.strip().strip("-") for s in element[0].lower().split(",")])
+
+
+class VersionedCommand(SortedOptionCommand):
+    """ Click Command subclass that supports a version option and can sort the options
+        if desired.
+    """
+
+    version_option_switches = None
+    version_option_help = None
+    version_option_callback = None
+
+    # noinspection PyShadowingBuiltins
+    def __init__(
+        self,
+        name,
+        context_settings=None,
+        callback=None,
+        params=None,
+        help=None,
+        epilog=None,
+        short_help=None,
+        options_metavar="[OPTIONS]",
+        add_help_option=True,
+        hidden=False,
+        deprecated=False,
+    ):
+
+        version_option = click.Option(
+            self.version_option_switches,
+            is_flag=True,
+            callback=self.__class__.version_option_callback,
+            expose_value=False,
+            is_eager=True,
+            help=self.version_option_help,
+        )
+
+        params = params or []
+        params.append(version_option)
+
+        super().__init__(
+            name,
+            context_settings,
+            callback,
+            params,
+            help,
+            epilog,
+            short_help,
+            options_metavar,
+            add_help_option,
+            hidden,
+            deprecated,
+        )
+
+
+class AutoConfigCommand(VersionedCommand):
     """ Click Command subclass that loads settings from a configuration file and that
-        can emit configuration file settings from the given command line arguments.
+        can emit configuration file settings from the given command line arguments,
+        supports a version option, and can sort the options if desired.
     """
 
     config_file_option_name = None
@@ -43,10 +128,6 @@ class AutoConfigCommand(click.Command):
     print_config_option_switches = None
     print_config_option_help = None
     print_config_callback = None
-    version_option_switches = None
-    version_option_help = None
-    version_option_callback = None
-    sort_help_options = False
 
     # noinspection PyShadowingBuiltins
     def __init__(
@@ -72,17 +153,8 @@ class AutoConfigCommand(click.Command):
             help=self.print_config_option_help,
         )
 
-        version_option = click.Option(
-            self.version_option_switches,
-            is_flag=True,
-            callback=self.__class__.version_option_callback,
-            expose_value=False,
-            is_eager=True,
-            help=self.version_option_help,
-        )
-
         params = params or []
-        params.extend((print_config_option, version_option))
+        params.append(print_config_option)
 
         super().__init__(
             name,
@@ -97,24 +169,6 @@ class AutoConfigCommand(click.Command):
             hidden,
             deprecated,
         )
-
-    def format_options(self, ctx, formatter):
-        """ Override Click's default listing of options, sorting them if necessary.
-        """
-        opts = []
-
-        for param in self.get_params(ctx):
-            switch_help = param.get_help_record(ctx)
-
-            if switch_help is not None:
-                opts.append(switch_help)
-
-        if opts:
-            if self.sort_help_options:
-                opts.sort(key=self.get_switch_sort_key)
-
-            with formatter.section("Options"):
-                formatter.write_dl(opts)
 
     @staticmethod
     def get_config_path(command_name, config_path_override):
@@ -142,13 +196,6 @@ class AutoConfigCommand(click.Command):
                         short_switch_list.append(switch[1])
 
         return "".join(short_switch_list)
-
-    @staticmethod
-    def get_switch_sort_key(element):
-        """ Extract the concatenated names of the option switches without leading
-            hyphens.
-        """
-        return "".join([s.strip().strip("-") for s in element[0].lower().split(",")])
 
     def invoke(self, ctx):
         """ Load the configuration settings into the context.
@@ -283,6 +330,44 @@ class AutoConfigCommand(click.Command):
         return "\n".join(lines).strip()
 
 
+def make_sorted_option_command(sort_help_options=True):
+    """ Return a custom Command subclass that can sort the options if desired.
+    """
+    command_class = AutoConfigCommand
+    command_class.sort_help_options = sort_help_options
+    return command_class
+
+
+def make_versioned_command(
+    version_option_switches=DEFAULT_VERSION_OPTION_SWITCHES,
+    version_option_help=DEFAULT_VERSION_OPTION_HELP,
+    version_text="",
+    sort_help_options=True,
+):
+    """ Return a custom Command subclass that supports a version option and can sort the
+        options if desired.
+        Based on https://stackoverflow.com/a/46391887/726
+    """
+
+    def version_option_callback(ctx, echo):
+        """ Show the version number and exit.
+        """
+        try:
+            version = pkg_resources.get_distribution(ctx.command_path).version
+            echo(f"{ctx.command_path} version {version}")
+        except pkg_resources.DistributionNotFound:  # pragma: no cover
+            echo(f"{ctx.command_path} (version not registered)")
+
+        if version_text:
+            echo(version_text)
+
+    command_class = make_sorted_option_command(sort_help_options)
+    command_class.version_option_switches = version_option_switches
+    command_class.version_option_help = version_option_help
+    command_class.version_option_callback = make_eager_callback(version_option_callback)
+    return command_class
+
+
 def make_auto_config_command(
     config_file_option_name=DEFAULT_CONFIG_FILE_OPTION_NAME,
     print_config_option_name=DEFAULT_PRINT_CONFIG_OPTION_NAME,
@@ -294,8 +379,9 @@ def make_auto_config_command(
     sort_help_options=True,
     excluded_options=None,
 ):
-    """ Return a custom Command class that loads any configuration file before
-        arguments passed on the command line.
+    """ Return a custom Command subclass that loads settings from a configuration file
+        and that can emit configuration file settings from the given command line
+        arguments, supports a version option, and can sort the options if desired.
         Based on https://stackoverflow.com/a/46391887/726
     """
     excluded_options = excluded_options if excluded_options is not None else []
@@ -317,27 +403,14 @@ def make_auto_config_command(
         )
         echo(config)
 
-    def version_option_callback(ctx, echo):
-        """ Show the version number and exit.
-        """
-        try:
-            version = pkg_resources.get_distribution(ctx.command_path).version
-            echo(f"{ctx.command_path} version {version}")
-        except pkg_resources.DistributionNotFound:  # pragma: no cover
-            echo(f"{ctx.command_path} (version not registered)")
-
-        if version_text:
-            echo(version_text)
-
-    command_class = AutoConfigCommand
+    command_class = make_versioned_command(
+        version_option_switches, version_option_help, version_text, sort_help_options
+    )
     command_class.config_file_option_name = config_file_option_name
     command_class.print_config_option_name = print_config_option_name
     command_class.print_config_option_switches = print_config_option_switches
     command_class.print_config_option_help = print_config_option_help
     command_class.print_config_callback = make_eager_callback(print_config_callback)
-    command_class.version_option_switches = version_option_switches
-    command_class.version_option_help = version_option_help
-    command_class.version_option_callback = make_eager_callback(version_option_callback)
     command_class.sort_help_options = sort_help_options
     return command_class
 
