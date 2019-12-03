@@ -117,19 +117,18 @@ class AutoConfigCommand(click.Command):
                 formatter.write_dl(opts)
 
     @staticmethod
-    def get_config_path(command_name, config_file_option_value):
+    def get_config_path(command_name, config_path):
         """ Return the configuration file path for the given command name and overriding
             file path, if specified.
         """
-        config_path = config_file_option_value
-
-        if not config_path:
-            config_path = os.path.join(
+        return (
+            config_path
+            if config_path
+            else os.path.join(
                 click.get_app_dir(app_name=command_name, force_posix=True),
                 f"{command_name}.toml",
             )
-
-        return config_path
+        )
 
     @staticmethod
     def get_short_switches(options):

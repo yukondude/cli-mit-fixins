@@ -6,6 +6,8 @@
 # Licensed under the GNU General Public License, version 3.
 # Refer to the attached LICENSE file or see <http://www.gnu.org/licenses/> for details.
 
+from os.path import expanduser
+
 from click.core import Option
 from click.testing import CliRunner
 import pytest
@@ -15,7 +17,18 @@ from mitfixins.exceptions import CliException
 
 
 COMMAND_NAME = "test_config"
-CONFIG_FILE_PATH = "test_config.toml"
+CONFIG_PATH = "test_config.toml"
+
+
+@pytest.mark.parametrize("command_name,config_path,expected", [
+    # command_name, config_path, expected
+    (COMMAND_NAME, CONFIG_PATH, CONFIG_PATH),
+    (COMMAND_NAME, None, expanduser(f"~/.{COMMAND_NAME}/{CONFIG_PATH}")),
+    (f"{COMMAND_NAME}.ext", None,
+     expanduser(f"~/.{COMMAND_NAME}.ext/{COMMAND_NAME}.ext.toml")),
+])
+def test_get_config_path(command_name, config_path, expected):
+    assert AutoConfigCommand.get_config_path(command_name, config_path) == expected
 
 
 @pytest.mark.parametrize("options,expected", [
@@ -76,21 +89,21 @@ def test_get_switch_sort_key(element, expected):
 
 def test_load_toml_config_fail():
     with CliRunner().isolated_filesystem():
-        with open(CONFIG_FILE_PATH, "w") as toml_file:
+        with open(CONFIG_PATH, "w") as toml_file:
             toml_file.write("BAD MOJO")
 
         with pytest.raises(CliException):
-            assert AutoConfigCommand.load_toml_config(COMMAND_NAME, CONFIG_FILE_PATH)
+            assert AutoConfigCommand.load_toml_config(COMMAND_NAME, CONFIG_PATH)
 
 
 def test_load_toml_config_pass():
     with CliRunner().isolated_filesystem():
-        with open(CONFIG_FILE_PATH, "w") as toml_file:
+        with open(CONFIG_PATH, "w") as toml_file:
             toml_file.write(f"[{COMMAND_NAME}]\nvariable = 13")
 
         assert {"variable": 13} == AutoConfigCommand.load_toml_config(
             COMMAND_NAME,
-            CONFIG_FILE_PATH,
+            CONFIG_PATH,
         )
 
 
@@ -114,7 +127,7 @@ def test_print_config(options, excluded_options, arguments, expected):
 
     assert AutoConfigCommand.print_config(
         COMMAND_NAME,
-        CONFIG_FILE_PATH,
+        CONFIG_PATH,
         options,
         excluded_options,
         arguments,
@@ -123,7 +136,7 @@ def test_print_config(options, excluded_options, arguments, expected):
 
 
 EXPECTED_EMPTY_CONFIG = f"""# Sample {COMMAND_NAME} configuration file, by """ + \
-    f"""default located at {CONFIG_FILE_PATH}.
+    f"""default located at {CONFIG_PATH}.
 # Configuration options already set to the default value are commented-out.
 
 [{COMMAND_NAME}]"""
@@ -152,7 +165,7 @@ a = 33"""
 def test_render_toml_config(settings, arguments, expected):
     assert AutoConfigCommand.render_toml_config(
         COMMAND_NAME,
-        CONFIG_FILE_PATH,
+        CONFIG_PATH,
         settings,
         arguments
     ) == expected
