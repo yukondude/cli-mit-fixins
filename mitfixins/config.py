@@ -117,17 +117,16 @@ class AutoConfigCommand(click.Command):
                 formatter.write_dl(opts)
 
     @staticmethod
-    def get_config_path(command_name, config_path):
+    def get_config_path(command_name, config_path_override):
         """ Return the configuration file path for the given command name and overriding
             file path, if specified.
         """
-        return (
-            config_path
-            if config_path
-            else os.path.join(
-                click.get_app_dir(app_name=command_name, force_posix=True),
-                f"{command_name}.toml",
-            )
+        if config_path_override:
+            return config_path_override
+
+        return os.path.join(
+            click.get_app_dir(app_name=command_name, force_posix=True),
+            f"{command_name}.toml",
         )
 
     @staticmethod
