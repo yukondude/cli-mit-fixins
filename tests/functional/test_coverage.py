@@ -32,6 +32,10 @@ def test_coverage():
     runner = CliRunner()
     result = runner.invoke(main, ["--help"])
     assert result.exit_code == 0
+    result = runner.invoke(main, ["--version"])
+    assert result.exit_code == 0
+    result = runner.invoke(main, ["--print-config"])
+    assert result.exit_code == 0
     result = runner.invoke(main, [])
     assert result.exit_code == 0
 

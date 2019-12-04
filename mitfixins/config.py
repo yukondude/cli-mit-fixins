@@ -376,7 +376,7 @@ def make_versioned_command(
         try:
             version = pkg_resources.get_distribution(ctx.command_path).version
             echo(f"{ctx.command_path} version {version}")
-        except pkg_resources.DistributionNotFound:  # pragma: no cover
+        except pkg_resources.DistributionNotFound:
             echo(f"{ctx.command_path} (version not registered)")
 
         if version_text:
@@ -449,6 +449,6 @@ def make_eager_callback(wrapped_func):
 
         wrapped_func(ctx, echo=make_echo(Verbosity.HIGH))
         ctx.exit()
-        _ = param
+        _ = param  # pragma: no cover
 
     return eager_callback
