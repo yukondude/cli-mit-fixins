@@ -11,11 +11,9 @@ import re
 import subprocess
 
 
-HERE_PATH = os.path.dirname(os.path.realpath(__file__))
-
-
-def capture(args):
-    command = [os.path.join(HERE_PATH, args[0])]
+def capture_command(args):
+    here_path = os.path.dirname(os.path.realpath(__file__))
+    command = [os.path.join(here_path, args[0])]
     command.extend(args[1:])
     proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = proc.communicate()
@@ -23,7 +21,7 @@ def capture(args):
 
 
 def test_sorted():
-    out, err, exit_code = capture(["cli_sorted.py", "--help"])
+    out, err, exit_code = capture_command(["cli_sorted.py", "--help"])
     assert exit_code == 0
     pattern = r"-a, --apple.+-B, --banana.+-h, --help.+-z, --zulu"
     assert re.search(pattern, out, re.DOTALL)
@@ -31,7 +29,7 @@ def test_sorted():
 
 
 def test_unsorted():
-    out, err, exit_code = capture(["cli_unsorted.py", "--help"])
+    out, err, exit_code = capture_command(["cli_unsorted.py", "--help"])
     assert exit_code == 0
     pattern = r"-z, --zulu.+-B, --banana.+-a, --apple.+ -h, --help"
     assert re.search(pattern, out, re.DOTALL)
