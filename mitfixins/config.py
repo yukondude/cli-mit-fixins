@@ -152,9 +152,20 @@ class AutoConfigCommand(VersionedCommand):
             expose_value=False,
             help=self.print_config_option_help,
         )
+        config_file_option = click.Option(
+            ["--config-file", "-C"],
+            type=click.Path(
+                exists=True,
+                file_okay=True,
+                dir_okay=False,
+                readable=True,
+                resolve_path=True,
+            ),
+            help="Full path of a TOML-format configuration file.",
+        )
 
         params = params or []
-        params.append(print_config_option)
+        params.extend((print_config_option, config_file_option))
 
         super().__init__(
             name,
@@ -178,10 +189,18 @@ class AutoConfigCommand(VersionedCommand):
         if config_path_override:
             return config_path_override
 
+        config_slug = AutoConfigCommand.get_config_slug(command_name)
+
         return os.path.join(
-            click.get_app_dir(app_name=command_name, force_posix=True),
-            f"{command_name}.toml",
+            click.get_app_dir(app_name=config_slug, force_posix=True),
+            f"{config_slug}.toml",
         )
+
+    @staticmethod
+    def get_config_slug(command_name):
+        """ Return a legal TOML section name slug from the given command name.
+        """
+        return os.path.splitext(command_name)[0].lower().replace(".", "-").strip("-")
 
     @staticmethod
     def get_short_switches(options):
@@ -267,13 +286,14 @@ class AutoConfigCommand(VersionedCommand):
         """ Load the settings from the given path to a TOML-format configuration file.
         """
         settings = {}
+        config_slug = AutoConfigCommand.get_config_slug(command_name)
 
         with open(config_path, "r") as config_file:
             try:
-                settings = toml.load(config_file)[command_name]
+                settings = toml.load(config_file)[config_slug]
             except KeyError:
                 raise CliException(
-                    f"Unable to parse [{command_name}] section from '{config_path}'."
+                    f"Unable to parse [{config_slug}] section from '{config_path}'."
                 )
             except toml.TomlDecodeError as exc:
                 raise CliException(
@@ -305,13 +325,14 @@ class AutoConfigCommand(VersionedCommand):
     def render_toml_config(command_name, config_path, settings, arguments):
         """ Return the settings rendered into a TOML-format configuration file string.
         """
+        config_slug = AutoConfigCommand.get_config_slug(command_name)
         lines = [
             f"# Sample {command_name} configuration file, by default located at "
             f"{config_path}.",
             "# Configuration options already set to the default value are "
             "commented-out.",
             "",
-            f"[{command_name}]",
+            f"[{config_slug}]",
             "",
         ]
 

@@ -25,10 +25,21 @@ CONFIG_PATH = "test_config.toml"
     (COMMAND_NAME, CONFIG_PATH, CONFIG_PATH),
     (COMMAND_NAME, None, expanduser(f"~/.{COMMAND_NAME}/{CONFIG_PATH}")),
     (f"{COMMAND_NAME}.ext", None,
-     expanduser(f"~/.{COMMAND_NAME}.ext/{COMMAND_NAME}.ext.toml")),
+     expanduser(f"~/.{COMMAND_NAME}/{COMMAND_NAME}.toml")),
 ])
 def test_get_config_path(command_name, config_path, expected):
     assert AutoConfigCommand.get_config_path(command_name, config_path) == expected
+
+
+@pytest.mark.parametrize("command_name,expected", [
+    # command_name, expected
+    ("Command", "command"),
+    ("Command.py", "command"),
+    ("Command.py.exe", "command-py"),
+    (".Command.py", "command"),
+])
+def test_get_config_slug(command_name, expected):
+    assert AutoConfigCommand.get_config_slug(command_name) == expected
 
 
 @pytest.mark.parametrize("options,expected", [
